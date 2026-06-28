@@ -10,7 +10,6 @@ description = "Reproducible multimodal wearable physiology pipeline for stress a
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Portfolio Author" }]
 dependencies = [
     "numpy>=1.24",
     "pandas>=2.0",

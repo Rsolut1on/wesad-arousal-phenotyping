@@ -1,11 +1,11 @@
 # WESAD Arousal Phenotyping
 
-**A reproducible multimodal wearable physiology pipeline for daytime stress and autonomic arousal phenotyping, built on WESAD as a technical demonstrator for sleep, stress and arousal research workflows.**
+**A reproducible multimodal wearable physiology pipeline for daytime stress and autonomic arousal phenotyping on WESAD.**
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> This project demonstrates robust, reproducible computational workflows for multimodal physiological data: synchronization, artifact handling, quality control, feature extraction, visualization, subject-independent modeling, and interpretable physiological reporting.
+> Reproducible computational workflows for multimodal physiological data: synchronization, artifact handling, quality control, feature extraction, visualization, subject-independent modeling, and interpretable physiological reporting.
 
 ---
 
@@ -13,7 +13,7 @@
 
 This repository implements a reproducible pipeline for multimodal wearable stress and arousal phenotyping using the [WESAD](https://archive.ics.uci.edu/ml/datasets/WESAD+%28Wearable+Stress+and+Affect+Detection%29) dataset. It processes wrist- and chest-worn physiological signals including ECG, respiration, EDA, BVP, temperature, EMG, and accelerometry; performs signal quality control and windowed feature extraction; evaluates subject-independent stress and affect classification; and generates interpretable visual reports linking autonomic and behavioral physiology to stress and arousal states.
 
-The project is designed as a **research-facing prototype** for mobile and decentralized phenotyping workflows relevant to sleep, stress, arousal, and recovery studies. It intentionally **does not include raw WESAD data** — see [`scripts/download_instructions.md`](scripts/download_instructions.md).
+This pipeline targets mobile and decentralized phenotyping workflows relevant to stress, arousal, recovery, and sleep-adjacent monitoring. It intentionally **does not include raw WESAD data** — see [`scripts/download_instructions.md`](scripts/download_instructions.md).
 
 ![Pipeline diagram](reports/figures/pipeline_diagram.png)
 
@@ -240,10 +240,3 @@ If you use this pipeline, please cite the original WESAD dataset:
 }
 ```
 
----
-
-## PhD Application Note
-
-> To demonstrate fit with sleep/stress/arousal phenotyping research, I built a reproducible WESAD-based wearable physiology pipeline emphasizing multimodal preprocessing, QC, feature extraction, subject-independent modeling, and interpretable reporting. Raw data are excluded from the repository; evaluation uses leave-one-subject-out cross-validation to avoid identity leakage.
-
-**GitHub description:** Reproducible multimodal wearable physiology pipeline for stress and autonomic arousal phenotyping using WESAD, with QC, feature extraction, subject-independent modeling, and interpretable reports.
