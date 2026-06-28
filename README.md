@@ -1,45 +1,21 @@
 # WESAD Arousal Phenotyping
 
-**A reproducible multimodal wearable physiology pipeline for daytime stress and autonomic arousal phenotyping on WESAD.**
-
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> Reproducible computational workflows for multimodal physiological data: synchronization, artifact handling, quality control, feature extraction, visualization, subject-independent modeling, and interpretable physiological reporting.
+## Motivation
 
----
+This repository is a reproducible technical portfolio for wearable physiological stress/arousal phenotyping, created as preparation for research on sleep, stress, arousal, recovery, and mobile health sensing.
 
-## Overview
-
-This repository implements a reproducible pipeline for multimodal wearable stress and arousal phenotyping using the [WESAD](https://archive.ics.uci.edu/ml/datasets/WESAD+%28Wearable+Stress+and+Affect+Detection%29) dataset. It processes wrist- and chest-worn physiological signals including ECG, respiration, EDA, BVP, temperature, EMG, and accelerometry; performs signal quality control and windowed feature extraction; evaluates subject-independent stress and affect classification; and generates interpretable visual reports linking autonomic and behavioral physiology to stress and arousal states.
-
-This pipeline targets mobile and decentralized phenotyping workflows relevant to stress, arousal, recovery, and sleep-adjacent monitoring. It intentionally **does not include raw WESAD data** — see [`scripts/download_instructions.md`](scripts/download_instructions.md).
-
-![Pipeline diagram](reports/figures/pipeline_diagram.png)
-
-### Signal preprocessing
-
-Raw vs filtered ECG, EDA, and respiration from a representative stress segment:
-
-![Signal preprocessing examples](reports/figures/signal_preprocessing_examples.png)
-
----
-
-## Why This Matters for Sleep, Stress and Arousal Research
-
-WESAD does not contain overnight sleep recordings. This repository frames the work honestly as a **daytime stress/arousal pipeline** that transfers to sleep and home-monitoring research through shared methods:
-
-- Multimodal biosignal preprocessing and synchronization
-- Transparent artifact and quality-control reporting
-- Windowed feature extraction from wearable physiology
-- Subject-independent (LOSO) machine learning evaluation
-- Modality ablation and physiological interpretation
-
-These are the same building blocks needed for decentralized phenotyping in sleep, stress, recovery, and mobile-health studies.
+It implements end-to-end workflows for multimodal wearable biosignals: ingestion, preprocessing, quality control, windowed feature extraction, subject-independent evaluation, and interpretable reporting.
 
 ---
 
 ## Dataset
+
+This project uses the [WESAD](https://archive.ics.uci.edu/ml/datasets/WESAD+%28Wearable+Stress+and+Affect+Detection%29) dataset (15 subjects; chest RespiBAN + wrist Empatica E4; baseline, stress, amusement).
+
+Due to dataset licensing, **raw data are not redistributed**. Request or download WESAD from the official source and place subject folders under `data/raw/WESAD/`. See [`scripts/download_instructions.md`](scripts/download_instructions.md).
 
 | Property | Value |
 |---|---|
@@ -48,190 +24,157 @@ These are the same building blocks needed for decentralized phenotyping in sleep
 | Conditions | Baseline, stress (TSST), amusement |
 | Signals | ECG, EDA, EMG, respiration, BVP, temperature, accelerometry |
 
-**Label encoding:** baseline = 1, stress = 2, amusement = 3; transitional codes are excluded by default.
-
 ---
 
 ## Pipeline
+
+1. **Data ingestion** — load WESAD `.pkl` files, standardize labels, save interim parquet per subject
+2. **Preprocessing and quality checks** — filtering, artifact metrics, label coverage, window exclusion
+3. **Feature extraction** — sliding windows (60 s / 30 s step); HRV, EDA, respiration, BVP, motion, temperature, EMG
+4. **Subject-independent evaluation** — leave-one-subject-out (LOSO) classification; chest / wrist / combined comparisons
+5. **Visualization and reporting** — QC heatmaps, preprocessing examples, feature distributions, model metrics, ablation
 
 ```text
 WESAD .pkl  →  Preprocess  →  QC  →  Windowing  →  Features  →  LOSO Models  →  Reports
 ```
 
-1. **Data ingestion** — load subject `.pkl` files, standardize labels, save interim parquet
-2. **Quality control** — missingness, flatlines, out-of-range values, window exclusion
-3. **Windowing** — 60 s windows, 30 s step, majority-vote labels (≥ 80% purity)
-4. **Feature extraction** — HRV, EDA tonic/phasic, respiration, BVP, motion, temperature, EMG
-5. **Modeling** — Dummy, Logistic Regression, Random Forest, Gradient Boosting with LOSO CV
-6. **Reporting** — QC tables, confusion matrices, ablation charts, feature importance
+![Pipeline diagram](reports/figures/pipeline_diagram.png)
 
----
+**Signal preprocessing** — raw vs filtered ECG, EDA, and respiration (stress segment):
 
-## Installation
+![Signal preprocessing examples](reports/figures/signal_preprocessing_examples.png)
 
-```bash
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS/Linux
-source .venv/bin/activate
-
-pip install -r requirements.txt
-pip install -e .
-```
-
-Or with conda:
-
-```bash
-conda env create -f environment.yml
-conda activate wesad-arousal-phenotyping
-pip install -e .
-```
-
----
-
-## Reproducing the Analysis
-
-1. Download WESAD and place subject folders under `data/raw/WESAD/` (see [`scripts/download_instructions.md`](scripts/download_instructions.md)).
-
-2. Run the pipeline:
-
-```bash
-python scripts/run_preprocess.py --config configs/default.yaml
-python scripts/run_extract_features.py --config configs/default.yaml
-python scripts/run_train.py --config configs/default.yaml --task binary
-python scripts/run_evaluate.py --config configs/default.yaml
-python scripts/make_report.py --config configs/default.yaml
-```
-
-3. Run tests (synthetic data only):
-
-```bash
-pytest -q
-```
-
----
-
-## Quality Control
-
-Automated QC metrics are computed per subject and sensor:
-
-- Missingness and flatline fraction
-- Out-of-range values and abrupt jumps
-- Label coverage per condition
-- ECG R-peak detection success rate
-- EDA valid-range percentage
-- Window exclusion counts (mixed-label windows)
-
-Example output: [`reports/example_qc_report.md`](reports/example_qc_report.md)
+**Quality control** — missingness heatmap by subject and sensor modality:
 
 ![QC heatmap](reports/figures/qc_heatmap.png)
 
----
-
-## Feature Extraction
-
-Sliding windows (default 60 s / 30 s step) produce one row per subject-window with interpretable features:
-
-| Family | Examples |
-|---|---|
-| HRV | HR mean/std, RMSSD, SDNN, pNN50 |
-| EDA | tonic/phasic mean, SCR count/amplitude |
-| Respiration | breathing rate, amplitude, plausibility |
-| BVP | pulse rate, pulse variability |
-| Motion | vector magnitude mean/std/energy |
-| Temperature | mean, slope, range |
-| EMG | RMS, MAD, spectral energy |
+**Feature distributions** — extracted window-level features by condition (baseline / stress / amusement):
 
 ![Feature distributions](reports/figures/feature_distributions.png)
 ![Feature distributions grid](reports/figures/feature_distributions_grid.png)
 
 ---
 
-## Modeling and Evaluation
+## Relevance to Sleep, Stress and Arousal Research
 
-**Primary evaluation:** leave-one-subject-out (LOSO) cross-validation — no random window splits across subjects.
+This project demonstrates experience with wearable physiological signals, stress/arousal-related modelling, reproducible preprocessing, and analysis workflows relevant to mobile and decentralized phenotyping.
 
-**Metrics:** balanced accuracy, macro F1, ROC-AUC (binary stress detection), confusion matrix, per-subject performance.
+Concrete capabilities reflected in the codebase:
 
-**Comparisons:**
-- Chest only (`configs/sensors_chest.yaml`)
-- Wrist only (`configs/sensors_wrist.yaml`)
-- Chest + wrist (`configs/default.yaml`)
-- Feature-group ablation (HRV, EDA, respiration, motion, temperature, BVP, EMG)
+- Multimodal biosignal preprocessing and synchronization (ECG, EDA, respiration, BVP, accelerometry, temperature)
+- Transparent QC and artifact screening suitable for real-world sensing pipelines
+- Windowed physiological feature extraction with interpretable autonomic markers
+- Subject-independent evaluation (LOSO) to avoid identity leakage
+- Modality ablation and feature-importance analysis for physiological interpretation
+
+WESAD does not contain overnight sleep recordings; this repo is framed as a **daytime stress/arousal platform** whose methods transfer to sleep-adjacent and recovery monitoring research.
 
 ---
 
-## Results
+## Reproducibility
 
-Leave-one-subject-out (LOSO) evaluation on 15 WESAD subjects, 1,194 windows (60 s / 30 s step):
+### Python version
 
-### Binary stress vs non-stress
+Python **3.10+** recommended.
 
-| Model | Sensors | Task | CV | Balanced Accuracy | Macro F1 | ROC-AUC |
-|---|---|---|---|---:|---:|---:|
-| Dummy baseline | chest+wrist | binary | LOSO | 0.52 | 0.52 | 0.52 |
-| Logistic Regression | chest+wrist | binary | LOSO | 0.85 | 0.84 | 0.93 |
-| Random Forest | chest+wrist | binary | LOSO | **0.86** | **0.88** | **0.96** |
-| Gradient Boosting | chest+wrist | binary | LOSO | **0.90** | **0.90** | **0.97** |
-| Random Forest | chest only | binary | LOSO | 0.80 | 0.79 | 0.94 |
-| Random Forest | wrist only | binary | LOSO | 0.82 | 0.83 | 0.92 |
+### Dependencies
 
-### Three-class (baseline / stress / amusement)
+```bash
+pip install -r requirements.txt
+```
 
-| Model | Sensors | Balanced Accuracy | Macro F1 |
-|---|---|---:|---:|
-| Logistic Regression | chest+wrist | 0.70 | 0.66 |
-| Random Forest | chest+wrist | 0.68 | 0.67 |
-| Gradient Boosting | chest+wrist | 0.69 | 0.67 |
+Core stack: `numpy`, `pandas`, `scipy`, `scikit-learn`, `matplotlib`, `seaborn`, `neurokit2`, `PyYAML`, `pyarrow`, `joblib`, `tqdm`, `pytest`.
 
-### Modality ablation (Random Forest, LOSO)
+Alternatively:
 
-Removing **HRV** or **EDA** features causes the largest drop in balanced accuracy (~0.86 → ~0.67–0.69), suggesting autonomic cardiac and electrodermal markers are the most informative modalities in this pipeline.
+```bash
+conda env create -f environment.yml
+conda activate wesad-arousal-phenotyping
+```
 
-![Confusion matrix](reports/figures/confusion_matrix.png)
+### Commands
+
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
+
+pip install -r requirements.txt
+
+# Place WESAD under data/raw/WESAD/, then:
+python scripts/run_preprocess.py --config configs/default.yaml
+python scripts/run_extract_features.py --config configs/default.yaml
+python scripts/run_train.py --config configs/default.yaml --task binary
+python scripts/run_evaluate.py --config configs/default.yaml
+python scripts/make_report.py --config configs/default.yaml
+
+pytest -q
+```
+
+### Expected outputs
+
+| Path | Description |
+|---|---|
+| `data/interim/` | Per-subject parquet (gitignored) |
+| `data/processed/features.parquet` | Window-level feature matrix (gitignored) |
+| `outputs/qc_metrics.csv` | QC metrics per subject and sensor (gitignored) |
+| `outputs/metrics_*.json` | LOSO evaluation results (gitignored) |
+| `reports/figures/` | Pipeline, preprocessing, QC, distributions, LOSO, ablation plots |
+| `reports/tables/` | Feature importance, ablation, results summary CSVs |
+| `reports/example_qc_report.md` | Example QC markdown report |
+
+### Folder structure
+
+```text
+configs/           YAML configuration (default, chest-only, wrist-only)
+scripts/           CLI entry points
+src/wesad_arousal/ Core library (data, QC, features, modeling, reporting)
+tests/             Unit tests (synthetic data)
+notebooks/         Exploratory notebooks
+reports/           Generated figures and tables (committed examples)
+data/              Local raw/interim/processed data (gitignored)
+outputs/           Metrics and QC CSVs (gitignored)
+```
+
+---
+
+## Results (LOSO, 15 subjects, 1,194 windows)
+
+| Model | Sensors | Balanced Acc | Macro F1 | ROC-AUC |
+|---|---|---:|---:|---:|
+| Dummy baseline | chest+wrist | 0.52 | 0.52 | 0.52 |
+| Logistic Regression | chest+wrist | 0.85 | 0.84 | 0.93 |
+| Gradient Boosting | chest+wrist | **0.90** | **0.90** | **0.97** |
+| Random Forest | chest+wrist | 0.86 | 0.88 | 0.96 |
+| Random Forest | wrist only | 0.82 | 0.83 | 0.92 |
+| Random Forest | chest only | 0.80 | 0.79 | 0.94 |
+
+**Subject-independent evaluation** — LOSO model comparison and per-subject balanced accuracy:
+
 ![LOSO model comparison](reports/figures/loso_model_comparison.png)
 ![LOSO per-subject performance](reports/figures/loso_per_subject.png)
-![Modality ablation](reports/figures/modality_ablation.png)
+
+**Confusion matrix** (best LOSO model, aggregated folds):
+
+![Confusion matrix](reports/figures/confusion_matrix.png)
+
+**Interpretation** — feature importance and modality ablation (Random Forest, LOSO):
+
 ![Feature importance](reports/figures/feature_importance.png)
-
----
-
-## Physiological Interpretation
-
-Expected stress-associated **markers** (not causal claims):
-
-- Increased heart rate and reduced HRV variability during stress
-- Elevated EDA phasic activity and SCR frequency
-- Shifts in respiration rate and irregularity
-- Motion artifacts may confound wrist-worn signals
-
-Feature importance and ablation analyses help identify which modalities contribute most robustly under subject-independent evaluation.
+![Modality ablation](reports/figures/modality_ablation.png)
 
 ---
 
 ## Limitations
 
-- WESAD is a small laboratory dataset (15 subjects).
-- The dataset contains **daytime stress and affect states, not overnight sleep**.
-- Results may not transfer directly to home-based sleep studies.
-- Subject-independent evaluation is essential — random window splits inflate performance.
-- Wearable signals are affected by motion artifacts, device placement, and individual physiology.
+This is a **public-dataset technical portfolio** rather than a sleep study. WESAD does not directly measure sleep physiology, but it provides a useful platform for practicing wearable stress/arousal analysis.
 
----
+Additional constraints:
 
-## Repository Structure
-
-```text
-configs/           YAML configuration (default, chest-only, wrist-only)
-scripts/           CLI entry points for reproducible analysis
-src/wesad_arousal/ Core library (data, QC, features, modeling, reporting)
-tests/             Unit tests with synthetic toy data
-notebooks/         Exploratory analysis notebooks
-reports/           Generated figures and tables
-data/              Local data (raw/interim/processed — gitignored)
-outputs/           Metrics and QC CSVs (gitignored)
-```
+- Small laboratory cohort (15 subjects); results may not generalize to home-based or clinical populations
+- Daytime stress and affect states only — not overnight sleep architecture or circadian endpoints
+- Wearable signals are sensitive to motion artifacts, device placement, and individual physiology
+- Subject-independent evaluation (LOSO) is required; random window splits across subjects inflate performance
 
 ---
 
@@ -248,4 +191,3 @@ If you use this pipeline, please cite the original WESAD dataset:
   year={2018}
 }
 ```
-
