@@ -7,12 +7,17 @@ import numpy as np
 from wesad_arousal.preprocessing import lowpass_filter, safe_stat
 
 
-def extract_eda_features(eda: np.ndarray, fs: float, prefix: str = "eda") -> dict[str, float]:
+def extract_eda_features(
+    eda: np.ndarray,
+    fs: float,
+    prefix: str = "eda",
+    pre_denoised: bool = False,
+) -> dict[str, float]:
     signal = np.asarray(eda, dtype=float).reshape(-1)
     if signal.size == 0:
         return _empty_eda(prefix)
 
-    smoothed = lowpass_filter(signal, fs, cutoff=1.0)
+    smoothed = signal if pre_denoised else lowpass_filter(signal, fs, cutoff=1.0)
     valid_range = (0.01, 60.0)
     in_range = np.mean((smoothed >= valid_range[0]) & (smoothed <= valid_range[1]))
 

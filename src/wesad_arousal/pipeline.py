@@ -16,6 +16,7 @@ from wesad_arousal.features.respiration import extract_bvp_features, extract_res
 from wesad_arousal.features.temperature import extract_temperature_features
 from wesad_arousal.features.windowing import generate_windows, slice_signal_by_window, windows_to_dataframe
 from wesad_arousal.quality import compute_signal_qc, qc_row, window_exclusion_summary
+from wesad_arousal.preprocessing import preprocess_continuous_signals
 from wesad_arousal.labels import summarize_label_coverage
 
 
@@ -52,6 +53,12 @@ def extract_subject_features(subject_id: str, cfg: dict, interim_dir: Path) -> t
     use_wrist = cfg["devices"]["use_wrist"]
     groups = set(cfg.get("feature_groups", []))
 
+    raw_arrays: dict[str, np.ndarray] = {}
+    for key in ("chest_ECG", "chest_EDA", "chest_Resp", "wrist_EDA"):
+        if key in frames:
+            raw_arrays[key] = _get_signal_array(frames[key])
+    filtered_arrays = preprocess_continuous_signals(raw_arrays, cfg)
+
     feature_rows = []
     qc_rows: list[dict] = []
 
@@ -67,24 +74,40 @@ def extract_subject_features(subject_id: str, cfg: dict, interim_dir: Path) -> t
         }
 
         if use_chest and "hrv" in groups and "chest_ECG" in frames:
-            ecg = _get_signal_array(frames["chest_ECG"])
+            ecg = filtered_arrays.get("chest_ECG", raw_arrays["chest_ECG"])
             segment = slice_signal_by_window(ecg, cfg["sampling_rates"]["chest"], window)
-            row.update(extract_hrv_features(segment, cfg["sampling_rates"]["chest"], prefix="chest_hrv"))
+            row.update(
+                extract_hrv_features(
+                    segment, cfg["sampling_rates"]["chest"], prefix="chest_hrv", pre_filtered=True
+                )
+            )
 
         if use_chest and "eda" in groups and "chest_EDA" in frames:
-            eda = _get_signal_array(frames["chest_EDA"])
+            eda = filtered_arrays.get("chest_EDA", raw_arrays["chest_EDA"])
             segment = slice_signal_by_window(eda, cfg["sampling_rates"]["chest"], window)
-            row.update(extract_eda_features(segment, cfg["sampling_rates"]["chest"], prefix="chest_eda"))
+            row.update(
+                extract_eda_features(
+                    segment, cfg["sampling_rates"]["chest"], prefix="chest_eda", pre_denoised=True
+                )
+            )
 
         if use_wrist and "eda" in groups and "wrist_EDA" in frames:
-            eda = _get_signal_array(frames["wrist_EDA"])
+            eda = filtered_arrays.get("wrist_EDA", raw_arrays["wrist_EDA"])
             segment = slice_signal_by_window(eda, cfg["sampling_rates"]["wrist"]["EDA"], window)
-            row.update(extract_eda_features(segment, cfg["sampling_rates"]["wrist"]["EDA"], prefix="wrist_eda"))
+            row.update(
+                extract_eda_features(
+                    segment, cfg["sampling_rates"]["wrist"]["EDA"], prefix="wrist_eda", pre_denoised=True
+                )
+            )
 
         if use_chest and "respiration" in groups and "chest_Resp" in frames:
-            resp = _get_signal_array(frames["chest_Resp"])
+            resp = filtered_arrays.get("chest_Resp", raw_arrays["chest_Resp"])
             segment = slice_signal_by_window(resp, cfg["sampling_rates"]["chest"], window)
-            row.update(extract_respiration_features(segment, cfg["sampling_rates"]["chest"], prefix="chest_resp"))
+            row.update(
+                extract_respiration_features(
+                    segment, cfg["sampling_rates"]["chest"], prefix="chest_resp", pre_filtered=True
+                )
+            )
 
         if use_wrist and "bvp" in groups and "wrist_BVP" in frames:
             bvp = _get_signal_array(frames["wrist_BVP"])

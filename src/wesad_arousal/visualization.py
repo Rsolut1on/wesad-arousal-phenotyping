@@ -12,11 +12,16 @@ import seaborn as sns
 
 from wesad_arousal.data import load_subject_interim
 from wesad_arousal.labels import label_config
-from wesad_arousal.preprocessing import bandpass_filter, lowpass_filter
+from wesad_arousal.preprocessing import (
+    denoise_eda_continuous,
+    filter_ecg_continuous,
+    filter_respiration_continuous,
+)
 
 
 def _save(fig, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    fig.subplots_adjust(bottom=0.12)
     fig.tight_layout()
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
@@ -56,33 +61,53 @@ def plot_signal_preprocessing_examples(cfg: dict, out_path: Path, subject_id: st
     labels = np.asarray(frames["labels"])
     start, end = _find_stress_segment(labels, cfg)
     fs_chest = cfg["sampling_rates"]["chest"]
+
+    ecg_full = _signal_values(frames["chest_ECG"])
+    eda_full = _signal_values(frames["chest_EDA"])
+    resp_full = _signal_values(frames["chest_Resp"])
+
+    ecg_f_full = filter_ecg_continuous(ecg_full, fs_chest)
+    eda_f_full = denoise_eda_continuous(eda_full, fs_chest)
+    resp_f_full = filter_respiration_continuous(resp_full, fs_chest)
+
+    ecg = ecg_full[start:end]
+    eda = eda_full[start:end]
+    resp = resp_full[start:end]
+    ecg_f = ecg_f_full[start:end]
+    eda_f = eda_f_full[start:end]
+    resp_f = resp_f_full[start:end]
     t = np.arange(end - start) / fs_chest
 
-    ecg = _signal_values(frames["chest_ECG"])[start:end]
-    eda = _signal_values(frames["chest_EDA"])[start:end]
-    resp = _signal_values(frames["chest_Resp"])[start:end]
-    ecg_f = bandpass_filter(ecg, fs_chest, 0.5, 40.0)
-    eda_f = lowpass_filter(eda, fs_chest, 1.0)
-    resp_f = lowpass_filter(resp, fs_chest, 0.5)
-
-    fig, axes = plt.subplots(3, 1, figsize=(10, 7), sharex=True)
+    fig, axes = plt.subplots(3, 1, figsize=(10, 7.5), sharex=True)
     axes[0].plot(t, ecg, color="#B0BEC5", linewidth=0.8, label="raw")
-    axes[0].plot(t, ecg_f, color="#E45756", linewidth=1.0, label="bandpass 0.5–40 Hz")
+    axes[0].plot(t, ecg_f, color="#E45756", linewidth=1.0, label="zero-phase bandpass 0.5–40 Hz")
     axes[0].set_ylabel("ECG")
     axes[0].legend(loc="upper right", fontsize=8)
-    axes[0].set_title(f"Wearable Signal Preprocessing ({subject_id}, stress segment)")
+    axes[0].set_title(
+        f"Preprocessing on continuous signal, then segment extraction ({subject_id}, 30 s stress)"
+    )
 
     axes[1].plot(t, eda, color="#B0BEC5", linewidth=0.8, label="raw")
-    axes[1].plot(t, eda_f, color="#4C78A8", linewidth=1.0, label="lowpass 1 Hz")
+    axes[1].plot(t, eda_f, color="#4C78A8", linewidth=1.0, label="initial denoising (LP 1 Hz)")
     axes[1].set_ylabel("EDA")
     axes[1].legend(loc="upper right", fontsize=8)
 
     axes[2].plot(t, resp, color="#B0BEC5", linewidth=0.8, label="raw")
-    axes[2].plot(t, resp_f, color="#72B7B2", linewidth=1.0, label="lowpass 0.5 Hz")
+    axes[2].plot(t, resp_f, color="#72B7B2", linewidth=1.0, label="zero-phase bandpass 0.05–0.7 Hz")
     axes[2].set_ylabel("Respiration")
     axes[2].set_xlabel("Time (s)")
     axes[2].legend(loc="upper right", fontsize=8)
 
+    fig.text(
+        0.5,
+        0.01,
+        "Filters applied to full continuous recordings before segment extraction (filtfilt). "
+        "EDA panel shows initial denoising only; tonic/phasic decomposition and SCR features "
+        "are computed in the feature-extraction step.",
+        ha="center",
+        fontsize=8,
+        color="#444444",
+    )
     _save(fig, out_path)
 
 

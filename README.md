@@ -40,9 +40,25 @@ WESAD .pkl  →  Preprocess  →  QC  →  Windowing  →  Features  →  LOSO M
 
 ![Pipeline diagram](reports/figures/pipeline_diagram.png)
 
-**Signal preprocessing** — raw vs filtered ECG, EDA, and respiration (stress segment):
+### Signal preprocessing methodology
+
+All filtering uses **zero-phase Butterworth filters** (`scipy.signal.filtfilt`) applied to the **full continuous recording before segment/window extraction**, to reduce edge artifacts and avoid phase shifts in R-peak timing.
+
+| Signal | Step shown in figure | Feature-extraction step |
+|---|---|---|
+| **ECG** | Zero-phase bandpass **0.5–40 Hz** | R-peak detection and HRV (RMSSD, SDNN, pNN50, etc.) on filtered windows |
+| **EDA** | Initial denoising — low-pass **1 Hz** only | Tonic/phasic decomposition (NeuroKit2), SCR count and amplitude on windowed segments |
+| **Respiration** | Zero-phase bandpass **0.05–0.7 Hz** | Breathing rate, amplitude, plausibility (preserves stress-related faster breathing better than a 0.5 Hz low-pass) |
+
+> **Note:** The figure below shows a **representative 30-second stress segment for visual inspection** after continuous-signal filtering. Model evaluation uses **leave-one-subject-out (LOSO)** splits to reduce subject leakage.
+
+**EDA initial denoising / smoothing** (not the full SCR analysis pipeline):
 
 ![Signal preprocessing examples](reports/figures/signal_preprocessing_examples.png)
+
+Window-level EDA features additionally include tonic mean, phasic mean/std, SCR count, and SCR amplitude. SCR rise time, recovery time, and stimulus-locked latency are **not** implemented in this version.
+
+---
 
 **Quality control** — missingness heatmap by subject and sensor modality:
 

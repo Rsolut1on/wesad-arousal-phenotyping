@@ -20,14 +20,19 @@ def _fallback_hrv_features(signal: np.ndarray, fs: float, prefix: str) -> dict[s
     }
 
 
-def extract_hrv_features(ecg: np.ndarray, fs: float, prefix: str = "hrv") -> dict[str, float]:
+def extract_hrv_features(
+    ecg: np.ndarray,
+    fs: float,
+    prefix: str = "hrv",
+    pre_filtered: bool = False,
+) -> dict[str, float]:
     signal = np.asarray(ecg, dtype=float).reshape(-1)
     if signal.size < fs * 5:
         features = _fallback_hrv_features(signal, fs, prefix)
         features[f"{prefix}_peak_success_rate"] = 0.0
         return features
 
-    filtered = bandpass_filter(signal, fs, low=0.5, high=40.0)
+    filtered = signal if pre_filtered else bandpass_filter(signal, fs, low=0.5, high=40.0)
 
     try:
         import neurokit2 as nk

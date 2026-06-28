@@ -5,10 +5,15 @@ from __future__ import annotations
 import numpy as np
 from scipy import signal as scipy_signal
 
-from wesad_arousal.preprocessing import safe_stat
+from wesad_arousal.preprocessing import bandpass_filter, safe_stat
 
 
-def extract_respiration_features(resp: np.ndarray, fs: float, prefix: str = "resp") -> dict[str, float]:
+def extract_respiration_features(
+    resp: np.ndarray,
+    fs: float,
+    prefix: str = "resp",
+    pre_filtered: bool = False,
+) -> dict[str, float]:
     signal = np.asarray(resp, dtype=float).reshape(-1)
     if signal.size < fs * 5:
         return {
@@ -19,13 +24,14 @@ def extract_respiration_features(resp: np.ndarray, fs: float, prefix: str = "res
             f"{prefix}_plausibility": 0.0,
         }
 
-    rate = _estimate_breathing_rate(signal, fs)
+    filtered = signal if pre_filtered else bandpass_filter(signal, fs, low=0.05, high=0.7)
+    rate = _estimate_breathing_rate(filtered, fs)
     plausibility = 1.0 if 6.0 <= rate <= 40.0 else 0.0
     return {
         f"{prefix}_rate_mean": rate,
-        f"{prefix}_rate_std": safe_stat(signal, np.std),
-        f"{prefix}_amplitude_mean": safe_stat(signal, np.mean),
-        f"{prefix}_amplitude_std": safe_stat(signal, np.std),
+        f"{prefix}_rate_std": safe_stat(filtered, np.std),
+        f"{prefix}_amplitude_mean": safe_stat(filtered, np.mean),
+        f"{prefix}_amplitude_std": safe_stat(filtered, np.std),
         f"{prefix}_plausibility": plausibility,
     }
 
