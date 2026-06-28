@@ -12,9 +12,12 @@ from wesad_arousal.visualization import (
     plot_ablation,
     plot_confusion_matrix,
     plot_feature_distributions,
+    plot_feature_distributions_grid,
     plot_feature_importance,
+    plot_metrics_from_json,
     plot_pipeline_diagram,
     plot_qc_heatmap,
+    plot_signal_preprocessing_examples,
 )
 
 
@@ -58,6 +61,7 @@ def generate_full_report(cfg: dict) -> Path:
     processed_dir = Path(cfg["paths"]["processed_dir"])
 
     plot_pipeline_diagram(figures_dir / "pipeline_diagram.png")
+    plot_signal_preprocessing_examples(cfg, figures_dir / "signal_preprocessing_examples.png")
 
     qc_path = outputs_dir / "qc_metrics.csv"
     if qc_path.exists():
@@ -68,6 +72,11 @@ def generate_full_report(cfg: dict) -> Path:
     if features_path.exists():
         features_df = pd.read_parquet(features_path)
         plot_feature_distributions(features_df, figures_dir / "feature_distributions.png")
+        plot_feature_distributions_grid(features_df, figures_dir / "feature_distributions_grid.png")
+
+    default_metrics = outputs_dir / "metrics_default.json"
+    if default_metrics.exists():
+        plot_metrics_from_json(default_metrics, figures_dir)
 
     metrics_files = sorted(outputs_dir.glob("metrics_*.json"))
     if metrics_files:

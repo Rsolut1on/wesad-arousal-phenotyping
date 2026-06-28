@@ -17,6 +17,12 @@ This pipeline targets mobile and decentralized phenotyping workflows relevant to
 
 ![Pipeline diagram](reports/figures/pipeline_diagram.png)
 
+### Signal preprocessing
+
+Raw vs filtered ECG, EDA, and respiration from a representative stress segment:
+
+![Signal preprocessing examples](reports/figures/signal_preprocessing_examples.png)
+
 ---
 
 ## Why This Matters for Sleep, Stress and Arousal Research
@@ -138,6 +144,7 @@ Sliding windows (default 60 s / 30 s step) produce one row per subject-window wi
 | EMG | RMS, MAD, spectral energy |
 
 ![Feature distributions](reports/figures/feature_distributions.png)
+![Feature distributions grid](reports/figures/feature_distributions_grid.png)
 
 ---
 
@@ -183,6 +190,8 @@ Leave-one-subject-out (LOSO) evaluation on 15 WESAD subjects, 1,194 windows (60 
 Removing **HRV** or **EDA** features causes the largest drop in balanced accuracy (~0.86 → ~0.67–0.69), suggesting autonomic cardiac and electrodermal markers are the most informative modalities in this pipeline.
 
 ![Confusion matrix](reports/figures/confusion_matrix.png)
+![LOSO model comparison](reports/figures/loso_model_comparison.png)
+![LOSO per-subject performance](reports/figures/loso_per_subject.png)
 ![Modality ablation](reports/figures/modality_ablation.png)
 ![Feature importance](reports/figures/feature_importance.png)
 
